@@ -120,24 +120,21 @@
   }
 }
 
-.glowBox {
-  width: 350px;
-  height: 350px;
-  background: rgb(0, 0, 0);
-  border-radius: 50%;
-  animation: glow 2s ease-in-out infinite;
-  opacity: 0.6;
+/* Glowbox styles */
+.glowbox {
+  margin: 0px auto;
+  width: 380px;
+  height: 370px;
+  background: rgb(80, 101, 105);
+  border-radius: 60%;
+  animation: glow 6s infinite;
 }
 
 @keyframes glow {
-  0% {
-    box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 100px rgba(255, 255, 255, 0.6);
-  }
-  100% {
-    box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
+  40% {
+    box-shadow: 0px 0px 70px white;
   }
 }
+
+
 
