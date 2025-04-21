@@ -8,7 +8,7 @@ export default function HomePage() {
       <h1 className="text-2xl font-bold mb-4">Welcome to Seamless</h1>
       <div className="flex gap-4">
         <Button asChild>
-          <Link href="/auth">Sign In</Link>
+          <Link href="/signin">Sign In with Google</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href="/auth">Register</Link>
