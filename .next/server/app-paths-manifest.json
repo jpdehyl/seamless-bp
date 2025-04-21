@@ -1,7 +1,10 @@
 {
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/projects/page": "app/projects/page.js",
+  "/auth/callback/route": "app/auth/callback/route.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/auth/callback/route": "app/auth/callback/route.js"
+  "/projects/page": "app/projects/page.js",
+  "/finances/page": "app/finances/page.js",
+  "/page": "app/page.js",
+  "/settings/page": "app/settings/page.js"
 }

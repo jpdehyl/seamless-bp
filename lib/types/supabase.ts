@@ -1,11 +1,4 @@
-[?25l
-    Select a project:                                                                         
-                                                                                              
-  >  1. herpqcdwgbhwvbqxrzgz [name: seamless-bp, org: dyhssymtsmgjlegtqnyx, region: us-east-1]
-                                                                                              
-                                                                                              
-    ↑/k up • ↓/j down • / filter • q quit • ? more                                            
-                                                                                              [0D[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[0D[2K [0D[2K[?25h[?1002l[?1003l[?1006lexport type Json =
+export type Json =
   | string
   | number
   | boolean
