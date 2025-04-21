@@ -1,4 +1,11 @@
-export type Json =
+[?25l
+    Select a project:                                                                         
+                                                                                              
+  >  1. herpqcdwgbhwvbqxrzgz [name: seamless-bp, org: dyhssymtsmgjlegtqnyx, region: us-east-1]
+                                                                                              
+                                                                                              
+    ↑/k up • ↓/j down • / filter • q quit • ? more                                            
+                                                                                              [0D[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[0D[2K [0D[2K[?25h[?1002l[?1003l[?1006lexport type Json =
   | string
   | number
   | boolean
@@ -9,6 +16,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      invoices: {
+        Row: {
+          created_at: string
+          date_issued: string | null
+          due_date: string | null
+          id: string
+          invoice_amount: number
+          invoice_number: string
+          invoice_status: Database["public"]["Enums"]["invoice_status"] | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          payment_terms: Database["public"]["Enums"]["payment_terms"] | null
+        }
+        Insert: {
+          created_at?: string
+          date_issued?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_amount: number
+          invoice_number: string
+          invoice_status?: Database["public"]["Enums"]["invoice_status"] | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          payment_terms?: Database["public"]["Enums"]["payment_terms"] | null
+        }
+        Update: {
+          created_at?: string
+          date_issued?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_amount?: number
+          invoice_number?: string
+          invoice_status?: Database["public"]["Enums"]["invoice_status"] | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          payment_terms?: Database["public"]["Enums"]["payment_terms"] | null
+        }
+        Relationships: []
+      }
       permits: {
         Row: {
           deadline: string | null
@@ -337,6 +380,10 @@ export type Database = {
         | "Ivan Diaz Retana"
         | "Paola Navarro"
         | "JP Dominguez"
+      invoice_status: "Sent" | "Cancelled" | "Overdue" | "Paid"
+      payment_method: "E-transfer" | "Quickbooks" | "Cheque"
+      payment_status: "Not paid" | "Paid" | "Cancelled"
+      payment_terms: "Upon completion" | "N15" | "N30" | "N45" | "N60"
       permit_status_enum:
         | "required"
         | "applied"
@@ -522,6 +569,10 @@ export const Constants = {
         "Paola Navarro",
         "JP Dominguez",
       ],
+      invoice_status: ["Sent", "Cancelled", "Overdue", "Paid"],
+      payment_method: ["E-transfer", "Quickbooks", "Cheque"],
+      payment_status: ["Not paid", "Paid", "Cancelled"],
+      payment_terms: ["Upon completion", "N15", "N30", "N45", "N60"],
       permit_status_enum: [
         "required",
         "applied",
