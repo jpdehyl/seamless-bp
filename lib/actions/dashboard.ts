@@ -1,108 +1,345 @@
 'use server';
 
 import { supabaseServer } from '@/lib/supabase/server';
-import { Database } from '@/lib/types/supabase';
-import { PostgrestError } from '@supabase/supabase-js';
+import { Database, Tables, Enums } from '@/lib/types/supabase';
+import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 
 type ProjectStatus = Database['public']['Enums']['project_status'];
+type UserRole = Database['public']['Enums']['user_role'];
 
 // Define the statuses that represent 'Work in Progress'
-const WIP_STATUSES: ProjectStatus[] = ['in progress']; // Confirm if other statuses should be included
+const WIP_STATUSES: ProjectStatus[] = ['in progress', 'won']; // Added 'won' as potentially active
+const COMPLETED_STATUSES: ProjectStatus[] = ['completed', 'closed', 'invoiced'];
 
+// Filter type
+export interface DashboardFilters {
+    startDate?: string; // ISO string
+    endDate?: string;   // ISO string
+    statuses?: ProjectStatus[];
+    clientCompanies?: Enums<"client_company">[]; // Use the specific Enum type
+}
+
+// Type Definitions for Fetched Data
 interface Metric {
-  value: number;
-  trend: number | null; // Trend as a percentage change, null if not applicable or calculable
+    value: number;
+    trend: number | null;
 }
 
-interface DashboardMetrics {
-  totalRevenue: Metric;
-  newCustomers: Metric;
-  wipProjects: Metric;
+interface ProjectStatusDistributionItem {
+    status: ProjectStatus;
+    count: number;
 }
+
+type RecentInvoice = Pick<Tables<'invoices'>, 'id' | 'invoice_number' | 'invoice_amount' | 'invoice_status' | 'payment_status' | 'date_issued'>;
+
+type ActiveProject = Pick<Tables<'projects'>, 'id' | 'name' | 'status' | 'client_company' | 'end_date'>;
+
+interface KeyPM {
+    id: string;
+    name: string | null;
+    activeProjectCount: number;
+}
+
+// Combined type for all dashboard data
+export interface DashboardData {
+    summaryMetrics: {
+        totalRevenue: Metric;
+        newCustomers: Metric;
+        wipProjects: Metric;
+        completedRevenue: Metric; // Added metric for revenue from completed projects
+    };
+    projectStatusDistribution: ProjectStatusDistributionItem[];
+    recentInvoices: RecentInvoice[];
+    activeProjects: ActiveProject[];
+    keyPMs: KeyPM[];
+}
+
 
 // Helper function to calculate percentage change
 function calculateTrend(current: number, previous: number): number | null {
-  if (previous === 0) {
-    return current > 0 ? 100 : 0; // Assign 100% increase if previous was 0 and current is positive
-  }
-  return Math.round(((current - previous) / previous) * 100);
+    if (previous === 0) {
+        return current > 0 ? 100 : 0;
+    }
+    // Avoid division by zero if previous is null or undefined somehow
+    if (!previous) return null;
+    return Math.round(((current - previous) / previous) * 100);
 }
 
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const supabase = await supabaseServer();
+// --- Main Data Fetching Function ---
 
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+export async function getDashboardData(
+    filters: DashboardFilters = {}
+): Promise<{ data: DashboardData | null; error: PostgrestError | null }> {
+    const supabase = await supabaseServer();
+    let errorLog: string[] = []; // Store error messages as strings
 
-  const sixtyDaysAgo = new Date();
-  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-  const sixtyDaysAgoISO = sixtyDaysAgo.toISOString();
+    // --- Default Date Range (Last 30 days if not provided) ---
+    const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+    const startDateDefault = new Date();
+    startDateDefault.setDate(endDate.getDate() - 30);
+    const startDate = filters.startDate ? new Date(filters.startDate) : startDateDefault;
 
-  let errorLog: PostgrestError[] = [];
+    // Previous period for trend calculation (same duration as selected range)
+    const dateRangeDuration = endDate.getTime() - startDate.getTime();
+    const previousEndDate = new Date(startDate.getTime() - 1); // Day before the current start date
+    const previousStartDate = new Date(previousEndDate.getTime() - dateRangeDuration);
 
-  // --- Total Revenue --- 
-  const { data: revenueDataCurrent, error: revenueErrorCurrent } = await supabase
-    .from('projects')
-    .select('revenue')
-    .gte('created_at', thirtyDaysAgoISO);
-  if (revenueErrorCurrent) errorLog.push(revenueErrorCurrent);
-  const totalRevenueCurrent = revenueDataCurrent?.reduce((sum, p) => sum + (p.revenue ?? 0), 0) ?? 0;
+    // Convert dates to ISO strings for Supabase
+    const startDateISO = startDate.toISOString();
+    const endDateISO = endDate.toISOString();
+    const previousStartDateISO = previousStartDate.toISOString();
+    const previousEndDateISO = previousEndDate.toISOString();
 
-  const { data: revenueDataPrevious, error: revenueErrorPrevious } = await supabase
-    .from('projects')
-    .select('revenue')
-    .gte('created_at', sixtyDaysAgoISO)
-    .lt('created_at', thirtyDaysAgoISO);
-  if (revenueErrorPrevious) errorLog.push(revenueErrorPrevious);
-  const totalRevenuePrevious = revenueDataPrevious?.reduce((sum, p) => sum + (p.revenue ?? 0), 0) ?? 0;
-  const revenueTrend = calculateTrend(totalRevenueCurrent, totalRevenuePrevious);
 
-  // --- New Customers (Client Companies) ---
-  const { data: customerDataCurrent, error: customerErrorCurrent } = await supabase
-    .from('projects')
-    .select('client_company', { count: 'exact', head: true })
-    .gte('created_at', thirtyDaysAgoISO);
-  if (customerErrorCurrent) errorLog.push(customerErrorCurrent);
-  const newCustomersCurrent = customerDataCurrent?.length ?? 0; // Assuming distinct count needs more complex logic or view
-  // Note: Supabase count on select might not be distinct. A view or function might be better for exact distinct count.
-  // Fetching all and counting distinct in code for now, which is inefficient for large datasets.
-  const { data: allCustomersCurrent, error: allCustErrorCurr } = await supabase
-    .from('projects')
-    .select('client_company')
-    .gte('created_at', thirtyDaysAgoISO);
-  const distinctCustomersCurrent = new Set(allCustomersCurrent?.map(p => p.client_company).filter(Boolean)).size;
+    // Helper to build base project query with filters
+    const buildProjectQuery = (supabase: SupabaseClient<Database>, selectFields: string = '*') => {
+        let query = supabase.from('projects').select(selectFields, { count: 'exact' });
 
-  const { data: allCustomersPrevious, error: allCustErrorPrev } = await supabase
-    .from('projects')
-    .select('client_company')
-    .gte('created_at', sixtyDaysAgoISO)
-    .lt('created_at', thirtyDaysAgoISO);
-  const distinctCustomersPrevious = new Set(allCustomersPrevious?.map(p => p.client_company).filter(Boolean)).size;
-  const customerTrend = calculateTrend(distinctCustomersCurrent, distinctCustomersPrevious);
+        if (filters.startDate) {
+            query = query.gte('created_at', startDateISO);
+        }
+        if (filters.endDate) {
+            query = query.lte('created_at', endDateISO);
+        }
+        if (filters.statuses && filters.statuses.length > 0) {
+            query = query.in('status', filters.statuses);
+        }
+        if (filters.clientCompanies && filters.clientCompanies.length > 0) {
+            query = query.in('client_company', filters.clientCompanies);
+        }
+        return query;
+    }
 
-  // --- Work in Progress Projects ---
-  const { count: wipCountCurrent, error: wipErrorCurrent } = await supabase
-    .from('projects')
-    .select('*' , { count: 'exact', head: true })
-    .in('status', WIP_STATUSES);
-  if (wipErrorCurrent) errorLog.push(wipErrorCurrent);
-  const wipProjectsCurrent = wipCountCurrent ?? 0;
+    // --- Summary Metrics ---
 
-  // Trend for WIP projects is complex as status changes over time.
-  // A simpler approach: Count projects created in the previous 30 days that ended up in WIP status?
-  // Or count projects that were WIP 30 days ago? Requires historical tracking not directly available. 
-  // For now, omitting WIP trend until a clearer logic is defined.
-  const wipTrend = null; // Omitting WIP trend for now
+    // 1. Total Revenue (Current Period & Trend)
+    let totalRevenueCurrent = 0;
+    const revenueQueryCurrent = buildProjectQuery(supabase, 'revenue')
+        .gte('created_at', startDateISO)
+        .lte('created_at', endDateISO);
+    const { data: revenueDataCurrent, error: revenueErrorCurrent } = await revenueQueryCurrent;
 
-  // Log any errors
-  if (errorLog.length > 0) {
-    console.error("Errors fetching dashboard metrics:", errorLog);
-  }
+    if (revenueErrorCurrent) {
+        errorLog.push(`Revenue (Current): ${revenueErrorCurrent.message}`);
+    } else if (revenueDataCurrent !== null) {
+        // Assert type after checks, via unknown
+        const typedData = revenueDataCurrent as unknown as Array<{ revenue: number | null }>;
+        totalRevenueCurrent = typedData.reduce((sum: number, p) => sum + (p.revenue ?? 0), 0);
+    }
 
-  return {
-    totalRevenue: { value: totalRevenueCurrent, trend: revenueTrend },
-    newCustomers: { value: distinctCustomersCurrent, trend: customerTrend }, // Using distinct count
-    wipProjects: { value: wipProjectsCurrent, trend: wipTrend },
-  };
+    let totalRevenuePrevious = 0;
+    const revenueQueryPrevious = supabase
+        .from('projects')
+        .select('revenue')
+        .gte('created_at', previousStartDateISO)
+        .lte('created_at', previousEndDateISO);
+    const { data: revenueDataPrevious, error: revenueErrorPrevious } = await revenueQueryPrevious;
+
+    if (revenueErrorPrevious) {
+        errorLog.push(`Revenue (Previous): ${revenueErrorPrevious.message}`);
+    } else if (revenueDataPrevious !== null) {
+        // Assert type after checks, via unknown
+        const typedData = revenueDataPrevious as unknown as Array<{ revenue: number | null }>;
+        totalRevenuePrevious = typedData.reduce((sum: number, p) => sum + (p.revenue ?? 0), 0);
+    }
+    const revenueTrend = calculateTrend(totalRevenueCurrent, totalRevenuePrevious);
+
+    // 2. New Client Companies (Current Period & Trend)
+    let distinctCustomersCurrent = 0;
+    const customersQueryCurrent = buildProjectQuery(supabase, 'client_company')
+        .gte('created_at', startDateISO)
+        .lte('created_at', endDateISO);
+    const { data: customersCurrent, error: custErrCurr } = await customersQueryCurrent;
+
+    if (custErrCurr) {
+        errorLog.push(`Customers (Current): ${custErrCurr.message}`);
+    } else if (customersCurrent !== null) {
+        // Assert type after checks, via unknown
+        const typedData = customersCurrent as unknown as Array<{ client_company: Enums<"client_company"> | null }>;
+        distinctCustomersCurrent = new Set(typedData.map(p => p.client_company).filter(Boolean)).size;
+    }
+
+    let distinctCustomersPrevious = 0;
+    const customersQueryPrevious = supabase
+        .from('projects')
+        .select('client_company')
+        .gte('created_at', previousStartDateISO)
+        .lte('created_at', previousEndDateISO);
+    const { data: customersPrevious, error: custErrPrev } = await customersQueryPrevious;
+
+    if (custErrPrev) {
+        errorLog.push(`Customers (Previous): ${custErrPrev.message}`);
+    } else if (customersPrevious !== null) {
+        // Assert type after checks, via unknown
+        const typedData = customersPrevious as unknown as Array<{ client_company: Enums<"client_company"> | null }>;
+        distinctCustomersPrevious = new Set(typedData.map(p => p.client_company).filter(Boolean)).size;
+    }
+    const customerTrend = calculateTrend(distinctCustomersCurrent, distinctCustomersPrevious);
+
+    // 3. Work in Progress Projects (Current Count & Trend)
+    let wipProjectsCurrent = 0;
+    const wipQueryCurrent = buildProjectQuery(supabase, 'id').in('status', WIP_STATUSES);
+    const { count: wipCountCurrent, error: wipErrorCurrent } = await wipQueryCurrent;
+    if (wipErrorCurrent) {
+        errorLog.push(`WIP (Current): ${wipErrorCurrent.message}`);
+    } else if (wipCountCurrent !== null) {
+        // Type is correctly narrowed here (count is number | null)
+        wipProjectsCurrent = wipCountCurrent; // Assign directly, default 0 handles null case effectively
+    }
+
+    let wipCountPrevious = 0;
+    const wipQueryPrevious = supabase
+        .from('projects')
+        .select('id', { count: 'exact', head: true })
+        .in('status', WIP_STATUSES)
+        .gte('created_at', previousStartDateISO)
+        .lte('created_at', previousEndDateISO);
+    const { count: wipCountPrevData, error: wipErrorPrevious } = await wipQueryPrevious;
+    if (wipErrorPrevious) {
+        errorLog.push(`WIP (Previous): ${wipErrorPrevious.message}`);
+    } else if (wipCountPrevData !== null) {
+        // Type is correctly narrowed here
+        wipCountPrevious = wipCountPrevData ?? 0;
+    }
+    const wipTrend = calculateTrend(wipProjectsCurrent, wipCountPrevious);
+
+    // 4. Completed Projects Revenue (Current Period)
+    let completedRevenueCurrent = 0;
+    const completedRevenueQuery = buildProjectQuery(supabase, 'revenue')
+        .in('status', COMPLETED_STATUSES)
+        .gte('created_at', startDateISO)
+        .lte('created_at', endDateISO);
+    const { data: completedRevenueData, error: completedRevenueError } = await completedRevenueQuery;
+
+    if (completedRevenueError) {
+        errorLog.push(`Completed Revenue: ${completedRevenueError.message}`);
+    } else if (completedRevenueData !== null) {
+        // Assert type after checks, via unknown
+        const typedData = completedRevenueData as unknown as Array<{ revenue: number | null }>;
+        completedRevenueCurrent = typedData.reduce((sum: number, p) => sum + (p.revenue ?? 0), 0);
+    }
+    const completedRevenueMetric: Metric = { value: completedRevenueCurrent, trend: null };
+
+    // --- Project Status Distribution ---
+    let projectStatusDistribution: ProjectStatusDistributionItem[] = [];
+    const statusQuery = buildProjectQuery(supabase, 'status');
+    const { data: statusData, error: statusError } = await statusQuery;
+
+    if (statusError) {
+        errorLog.push(`Status Distribution: ${statusError.message}`);
+    } else if (statusData !== null) {
+        // Assert type after checks, via unknown
+        const typedStatusData = statusData as unknown as Array<{ status: ProjectStatus | null }>;
+        const statusCounts = typedStatusData.reduce((acc: Record<ProjectStatus, number>, project) => {
+            // Check project.status directly
+            if (project.status) {
+                acc[project.status] = (acc[project.status] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<ProjectStatus, number>);
+        projectStatusDistribution = Object.entries(statusCounts).map(([status, count]) => ({
+            status: status as ProjectStatus,
+            count,
+        }));
+    }
+
+    // --- Recent Invoices ---
+    let recentInvoices: RecentInvoice[] = [];
+    const invoicesQuery = supabase
+        .from('invoices')
+        .select('id, invoice_number, invoice_amount, invoice_status, payment_status, date_issued')
+        .order('date_issued', { ascending: false })
+        .limit(5);
+    const { data: recentInvoicesData, error: invoicesError } = await invoicesQuery;
+    if (invoicesError) {
+        errorLog.push(`Recent Invoices: ${invoicesError.message}`);
+    } else if (recentInvoicesData !== null) {
+        // Assert type after checks - should match RecentInvoice[]
+        recentInvoices = recentInvoicesData as unknown as RecentInvoice[];
+    }
+
+    // --- Active Projects Overview ---
+    let activeProjects: ActiveProject[] = [];
+    const activeProjectsQuery = buildProjectQuery(supabase, 'id, name, status, client_company, end_date')
+        .in('status', WIP_STATUSES);
+    const { data: activeProjectsData, error: activeProjectsError } = await activeProjectsQuery;
+
+    if (activeProjectsError) {
+        errorLog.push(`Active Projects: ${activeProjectsError.message}`);
+    } else if (activeProjectsData !== null) {
+        // Assert type after checks - should match ActiveProject[]
+        activeProjects = activeProjectsData as unknown as ActiveProject[];
+    }
+
+    // --- Key Personnel (PMs) ---
+    let keyPMs: KeyPM[] = [];
+    const pmsQuery = supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('role', 'pm' as UserRole);
+    const { data: pms, error: pmsError } = await pmsQuery;
+
+    if (pmsError) {
+        errorLog.push(`Fetching PMs: ${pmsError.message}`);
+    } else if (pms !== null) { 
+        // Assert type after checks, via unknown
+        const pmData = pms as unknown as Array<{ id: string, full_name: string | null }>;
+        const pmProjectCounts = await Promise.all(pmData.map(async (pm) => {
+            const pmProjectQuery = buildProjectQuery(supabase, 'id')
+                .in('status', WIP_STATUSES)
+                .eq('pm_id', pm.id);
+            const { count, error: countError } = await pmProjectQuery;
+
+            if (countError) {
+                errorLog.push(`Counting projects for PM ${pm.id}: ${countError.message}`);
+                return { id: pm.id, name: pm.full_name, activeProjectCount: 0 };
+            }
+            return { id: pm.id, name: pm.full_name, activeProjectCount: count ?? 0 };
+        }));
+        keyPMs = pmProjectCounts;
+    }
+
+    // --- Final Aggregation ---
+    if (errorLog.length > 0) {
+        console.error("Errors fetching dashboard data:", errorLog);
+        // Return partial data? Or null? Returning null if any critical error occurred.
+        // Fine-tune error handling based on which data is critical.
+        const criticalErrors = errorLog.some(e => e.startsWith('Revenue') || e.startsWith('WIP') || e.startsWith('Customers'));
+        if (criticalErrors) {
+             return { data: null, error: { message: `Errors fetching critical dashboard data: ${errorLog.join(', ')}`, details: '', hint:'', code: 'FETCH_ERROR' } as PostgrestError };
+        }
+    }
+
+    const dashboardData: DashboardData = {
+        summaryMetrics: {
+            totalRevenue: { value: totalRevenueCurrent, trend: revenueTrend },
+            newCustomers: { value: distinctCustomersCurrent, trend: customerTrend },
+            wipProjects: { value: wipProjectsCurrent, trend: wipTrend },
+            completedRevenue: completedRevenueMetric,
+        },
+        projectStatusDistribution,
+        recentInvoices,
+        activeProjects,
+        keyPMs,
+    };
+
+    return { data: dashboardData, error: null };
+}
+
+// Example of a potential dedicated function if needed elsewhere
+export async function getActiveProjects(filters: DashboardFilters = {}): Promise<{ data: ActiveProject[] | null; error: PostgrestError | null }> {
+     const supabase = await supabaseServer();
+     // Re-use buildProjectQuery logic here if desired
+     const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, status, client_company, end_date')
+        .in('status', WIP_STATUSES); // Add filters here too
+        // .gte('created_at', startDateISO) // Apply filters
+        // ... other filters
+
+     if (error) {
+        console.error("Error fetching active projects:", error);
+        return { data: null, error };
+     }
+     return { data, error: null };
 } 
