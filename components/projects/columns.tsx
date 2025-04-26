@@ -3,6 +3,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Project } from '@/lib/actions/projects'; // Import the Project type
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // Helper function to format dates (optional, can be done inline)
 const formatDate = (dateString: string | null) => {
@@ -33,22 +34,63 @@ const statusColors: Record<Project['status'], string> = {
 };
 
 export const columns: ColumnDef<Project>[] = [
-  {
-    accessorKey: 'name',
-    header: 'Project Name',
-    // TODO: Cell editing component
-  },
+  // Reordered columns according to specification
   {
     accessorKey: 'client_company',
     header: 'Client',
     cell: ({ row }) => row.original.client_company || '-', 
-    // TODO: Cell editing component (likely a select dropdown)
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'name',
+    header: 'Project Name',
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'project_number',
+    header: 'Project Number',
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'site_address',
+    header: 'Site Address',
+    cell: ({ row }) => row.original.site_address || '-',
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'revenue',
+    header: 'Revenue',
+    cell: ({ row }) => formatCurrency(row.original.revenue),
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'costs',
+    header: 'Costs',
+    cell: ({ row }) => formatCurrency(row.original.costs),
+    enableHiding: true,
+  },
+  {
+    id: 'profit',
+    header: 'Profit',
+    cell: ({ row }) => {
+      const revenue = row.original.revenue || 0;
+      const costs = row.original.costs || 0;
+      const profit = revenue - costs;
+      return formatCurrency(profit > 0 ? profit : null);
+    },
+    enableHiding: true,
   },
   {
     accessorKey: 'start_date',
     header: 'Start Date',
     cell: ({ row }) => formatDate(row.original.start_date),
-    // TODO: Cell editing component (date picker)
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'end_date',
+    header: 'End Date',
+    cell: ({ row }) => formatDate(row.original.end_date),
+    enableHiding: true,
   },
   {
     accessorKey: 'status',
@@ -62,13 +104,77 @@ export const columns: ColumnDef<Project>[] = [
         </Badge>
       );
     },
-    // TODO: Cell editing component (select dropdown)
+    enableHiding: true,
+  },
+  
+  // Additional columns that will be hidden by default
+  {
+    accessorKey: 'project_type',
+    header: 'Project Type',
+    cell: ({ row }) => row.original.project_type || '-',
+    enableHiding: true,
   },
   {
-    accessorKey: 'revenue',
-    header: 'Revenue',
-    cell: ({ row }) => formatCurrency(row.original.revenue),
-    // TODO: Cell editing component (number input)
+    accessorKey: 'client_project_manager',
+    header: 'Client PM',
+    cell: ({ row }) => row.original.client_project_manager || '-',
+    enableHiding: true,
   },
-  // TODO: Add an 'Actions' column for row-level operations (e.g., delete, view details)
+  {
+    accessorKey: 'dehyl_foreman',
+    header: 'Foreman',
+    cell: ({ row }) => row.original.dehyl_foreman || '-',
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'po_number',
+    header: 'PO Number',
+    cell: ({ row }) => row.original.po_number || '-',
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'margin',
+    header: 'Margin',
+    cell: ({ row }) => {
+      const margin = row.original.margin;
+      return margin !== null ? `${margin.toFixed(2)}%` : '-';
+    },
+    enableHiding: true,
+  },
+  {
+    accessorKey: 'created_at',
+    header: 'Created',
+    cell: ({ row }) => formatDate(row.original.created_at),
+    enableHiding: true,
+  },
+  
+  // Actions column
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row, table }) => {
+      const project = row.original;
+      // Get the handler from table meta - this function will be passed from ProjectDataTable
+      const handleEditClick = (table.options.meta as any)?.handleEditClick;
+      
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+              if (handleEditClick) {
+                  handleEditClick(project);
+              } else {
+                  console.error("handleEditClick not provided via table meta");
+                  alert("Edit action not configured"); // Basic fallback
+              }
+          }}
+        >
+          Edit
+        </Button>
+      );
+    },
+    enableSorting: false, // Disable sorting for actions column
+    enableHiding: false, // Disable hiding for actions column
+  },
 ]; 

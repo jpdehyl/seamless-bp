@@ -1,0 +1,3 @@
+## Future Features
+
+- **Project Map Visualization:** Implement a map view on the projects page to display project locations based on their `site_address`. This would require integrating a mapping library (e.g., Leaflet, Mapbox) and a geocoding service to convert addresses to coordinates. Markers on the map should ideally sync with the applied table filters. Deferred due to complexity, primarily geocoding integration. 

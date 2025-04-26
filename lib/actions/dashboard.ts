@@ -128,12 +128,21 @@ export async function getDashboardData(
     }
 
     let totalRevenuePrevious = 0;
-    const revenueQueryPrevious = supabase
+    // Apply filters to the previous period revenue query
+    let revenueQueryPreviousBase = supabase
         .from('projects')
         .select('revenue')
         .gte('created_at', previousStartDateISO)
         .lte('created_at', previousEndDateISO);
-    const { data: revenueDataPrevious, error: revenueErrorPrevious } = await revenueQueryPrevious;
+
+    if (filters.statuses && filters.statuses.length > 0) {
+        revenueQueryPreviousBase = revenueQueryPreviousBase.in('status', filters.statuses);
+    }
+    if (filters.clientCompanies && filters.clientCompanies.length > 0) {
+        revenueQueryPreviousBase = revenueQueryPreviousBase.in('client_company', filters.clientCompanies);
+    }
+
+    const { data: revenueDataPrevious, error: revenueErrorPrevious } = await revenueQueryPreviousBase;
 
     if (revenueErrorPrevious) {
         errorLog.push(`Revenue (Previous): ${revenueErrorPrevious.message}`);
@@ -160,12 +169,25 @@ export async function getDashboardData(
     }
 
     let distinctCustomersPrevious = 0;
-    const customersQueryPrevious = supabase
+    // Apply filters to the previous period customers query
+    let customersQueryPreviousBase = supabase
         .from('projects')
         .select('client_company')
         .gte('created_at', previousStartDateISO)
         .lte('created_at', previousEndDateISO);
-    const { data: customersPrevious, error: custErrPrev } = await customersQueryPrevious;
+
+    if (filters.statuses && filters.statuses.length > 0) {
+        customersQueryPreviousBase = customersQueryPreviousBase.in('status', filters.statuses);
+    }
+    if (filters.clientCompanies && filters.clientCompanies.length > 0) {
+        // Note: Filtering distinct previous *customers* by *client company* might be slightly odd logic,
+        // but we apply it for consistency with how the current period is filtered.
+        // If the goal is truly *new* customers regardless of filter, this filter might be removed here.
+        // Keeping it for now to match the pattern.
+        customersQueryPreviousBase = customersQueryPreviousBase.in('client_company', filters.clientCompanies);
+    }
+
+    const { data: customersPrevious, error: custErrPrev } = await customersQueryPreviousBase;
 
     if (custErrPrev) {
         errorLog.push(`Customers (Previous): ${custErrPrev.message}`);
@@ -188,13 +210,21 @@ export async function getDashboardData(
     }
 
     let wipCountPrevious = 0;
-    const wipQueryPrevious = supabase
+    // Apply filters to the previous period WIP query
+    let wipQueryPreviousBase = supabase
         .from('projects')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true }) // Use head: true for count only
         .in('status', WIP_STATUSES)
         .gte('created_at', previousStartDateISO)
         .lte('created_at', previousEndDateISO);
-    const { count: wipCountPrevData, error: wipErrorPrevious } = await wipQueryPrevious;
+
+    // Only apply clientCompanies filter here, as status is already fixed to WIP_STATUSES
+    if (filters.clientCompanies && filters.clientCompanies.length > 0) {
+        wipQueryPreviousBase = wipQueryPreviousBase.in('client_company', filters.clientCompanies);
+    }
+    // Note: We don't apply filters.statuses because we are specifically looking for WIP_STATUSES here.
+
+    const { count: wipCountPrevData, error: wipErrorPrevious } = await wipQueryPreviousBase;
     if (wipErrorPrevious) {
         errorLog.push(`WIP (Previous): ${wipErrorPrevious.message}`);
     } else if (wipCountPrevData !== null) {

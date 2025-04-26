@@ -9,41 +9,220 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          attendance_id: number
+          crew_id: number | null
+          date: string
+          hours_worked: number
+          month: string | null
+        }
+        Insert: {
+          attendance_id?: never
+          crew_id?: number | null
+          date: string
+          hours_worked: number
+          month?: string | null
+        }
+        Update: {
+          attendance_id?: never
+          crew_id?: number | null
+          date?: string
+          hours_worked?: number
+          month?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crew"
+            referencedColumns: ["crew_id"]
+          },
+        ]
+      }
+      crew: {
+        Row: {
+          crew_id: number
+          name: string
+          pay_rate: number
+        }
+        Insert: {
+          crew_id?: never
+          name: string
+          pay_rate: number
+        }
+        Update: {
+          crew_id?: never
+          name?: string
+          pay_rate?: number
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
+          basic_scope_of_work: string | null
+          client_code: string | null
+          client_company: Database["public"]["Enums"]["client_company"] | null
+          client_id: string | null
+          client_project_manager: string | null
+          costs: number | null
           created_at: string
           date_issued: string | null
+          dehyl_foreman: Database["public"]["Enums"]["dehyl_foreman"] | null
           due_date: string | null
+          end_date: string | null
           id: string
           invoice_amount: number
           invoice_number: string
           invoice_status: Database["public"]["Enums"]["invoice_status"] | null
+          margin: number | null
+          name: string | null
           payment_status: Database["public"]["Enums"]["payment_status"] | null
           payment_terms: Database["public"]["Enums"]["payment_terms"] | null
+          pm_id: string | null
+          po_number: string | null
+          project_number: string | null
+          project_type: string | null
+          site_address: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
         }
         Insert: {
+          basic_scope_of_work?: string | null
+          client_code?: string | null
+          client_company?: Database["public"]["Enums"]["client_company"] | null
+          client_id?: string | null
+          client_project_manager?: string | null
+          costs?: number | null
           created_at?: string
           date_issued?: string | null
+          dehyl_foreman?: Database["public"]["Enums"]["dehyl_foreman"] | null
           due_date?: string | null
+          end_date?: string | null
           id?: string
           invoice_amount: number
           invoice_number: string
           invoice_status?: Database["public"]["Enums"]["invoice_status"] | null
+          margin?: number | null
+          name?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           payment_terms?: Database["public"]["Enums"]["payment_terms"] | null
+          pm_id?: string | null
+          po_number?: string | null
+          project_number?: string | null
+          project_type?: string | null
+          site_address?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
         }
         Update: {
+          basic_scope_of_work?: string | null
+          client_code?: string | null
+          client_company?: Database["public"]["Enums"]["client_company"] | null
+          client_id?: string | null
+          client_project_manager?: string | null
+          costs?: number | null
           created_at?: string
           date_issued?: string | null
+          dehyl_foreman?: Database["public"]["Enums"]["dehyl_foreman"] | null
           due_date?: string | null
+          end_date?: string | null
           id?: string
           invoice_amount?: number
           invoice_number?: string
           invoice_status?: Database["public"]["Enums"]["invoice_status"] | null
+          margin?: number | null
+          name?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"] | null
           payment_terms?: Database["public"]["Enums"]["payment_terms"] | null
+          pm_id?: string | null
+          po_number?: string | null
+          project_number?: string | null
+          project_type?: string | null
+          site_address?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoices_project_number_fkey"
+            columns: ["project_number"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["project_number"]
+          },
+        ]
+      }
+      pay_period: {
+        Row: {
+          balance_owed: number | null
+          crew_id: number | null
+          month: string | null
+          pay_period_id: number
+          quincena_1: number | null
+          quincena_2: number | null
+          total_pay: number | null
+        }
+        Insert: {
+          balance_owed?: number | null
+          crew_id?: number | null
+          month?: string | null
+          pay_period_id?: never
+          quincena_1?: number | null
+          quincena_2?: number | null
+          total_pay?: number | null
+        }
+        Update: {
+          balance_owed?: number | null
+          crew_id?: number | null
+          month?: string | null
+          pay_period_id?: never
+          quincena_1?: number | null
+          quincena_2?: number | null
+          total_pay?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_period_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crew"
+            referencedColumns: ["crew_id"]
+          },
+        ]
+      }
+      payment: {
+        Row: {
+          crew_id: number | null
+          page_number: number
+          payment_date: string | null
+          payment_id: number
+        }
+        Insert: {
+          crew_id?: number | null
+          page_number: number
+          payment_date?: string | null
+          payment_id?: never
+        }
+        Update: {
+          crew_id?: number | null
+          page_number?: number
+          payment_date?: string | null
+          payment_id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crew"
+            referencedColumns: ["crew_id"]
+          },
+        ]
       }
       permits: {
         Row: {
@@ -270,6 +449,51 @@ export type Database = {
           },
         ]
       }
+      timecards: {
+        Row: {
+          balance_owed: number | null
+          created_at: string | null
+          date: string | null
+          hours: number | null
+          id: number
+          payment_amount: number | null
+          payment_date: string | null
+          period: string | null
+          project: string
+          total_pay: number | null
+          wage_per_hour: number
+          worker_name: string
+        }
+        Insert: {
+          balance_owed?: number | null
+          created_at?: string | null
+          date?: string | null
+          hours?: number | null
+          id?: number
+          payment_amount?: number | null
+          payment_date?: string | null
+          period?: string | null
+          project: string
+          total_pay?: number | null
+          wage_per_hour: number
+          worker_name: string
+        }
+        Update: {
+          balance_owed?: number | null
+          created_at?: string | null
+          date?: string | null
+          hours?: number | null
+          id?: number
+          payment_amount?: number | null
+          payment_date?: string | null
+          period?: string | null
+          project?: string
+          total_pay?: number | null
+          wage_per_hour?: number
+          worker_name?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           email: string | null
@@ -355,8 +579,8 @@ export type Database = {
         | "Soma Interiors Ltd"
         | "Horizon Eco Builders"
         | "WD Co-Auto"
-        | "Russell & Sons Enterprises"
-        | "Collins Company"
+        | "Russell & Sons Enterprises Inc"
+        | "Collin"
       client_project_manager:
         | "TJ Snowdon"
         | "Trevor Forbes"
@@ -541,8 +765,8 @@ export const Constants = {
         "Soma Interiors Ltd",
         "Horizon Eco Builders",
         "WD Co-Auto",
-        "Russell & Sons Enterprises",
-        "Collins Company",
+        "Russell & Sons Enterprises Inc",
+        "Collin",
       ],
       client_project_manager: [
         "TJ Snowdon",

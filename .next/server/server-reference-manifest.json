@@ -18,37 +18,29 @@
     },
     "44f2cf53df0127bb24e0ca37dcdbf49dc2d49013": {
       "workers": {
-        "app/projects/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Fprojects.ts%22%2C%5B%22getProjects%22%2C%22updateProjectField%22%5D%5D%5D&__client_imported__=!"
+        "app/projects/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Fprojects.ts%22%2C%5B%22getProjects%22%2C%22updateProjectField%22%2C%22updateProject%22%5D%5D%5D&__client_imported__=true!"
       },
       "layer": {
-        "app/projects/page": "rsc"
+        "app/projects/page": "action-browser"
       }
     },
     "89458021cf3d020135ba8a130830cc1826425d04": {
       "workers": {
-        "app/projects/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Fprojects.ts%22%2C%5B%22getProjects%22%2C%22updateProjectField%22%5D%5D%5D&__client_imported__=!"
+        "app/projects/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Fprojects.ts%22%2C%5B%22getProjects%22%2C%22updateProjectField%22%2C%22updateProject%22%5D%5D%5D&__client_imported__=true!"
       },
       "layer": {
-        "app/projects/page": "rsc"
+        "app/projects/page": "action-browser"
       }
     },
-    "02a31d77b1297419f970b2c98d03589bafa94e2f": {
+    "df1d1952f098f67669cf04d884f709d05d179818": {
       "workers": {
-        "app/finances/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Finvoices.ts%22%2C%5B%22updateInvoiceField%22%2C%22getInvoiceData%22%5D%5D%5D&__client_imported__=!"
+        "app/projects/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Fprojects.ts%22%2C%5B%22getProjects%22%2C%22updateProjectField%22%2C%22updateProject%22%5D%5D%5D&__client_imported__=true!"
       },
       "layer": {
-        "app/finances/page": "rsc"
-      }
-    },
-    "0ce00658e115f0c37c8194a5a3e0a52498b31ac7": {
-      "workers": {
-        "app/finances/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fjuandominguez%2Fseamless-bp%2Flib%2Factions%2Finvoices.ts%22%2C%5B%22updateInvoiceField%22%2C%22getInvoiceData%22%5D%5D%5D&__client_imported__=!"
-      },
-      "layer": {
-        "app/finances/page": "rsc"
+        "app/projects/page": "action-browser"
       }
     }
   },
   "edge": {},
-  "encryptionKey": "U2ZhDHdR7UIhBU0xBaeanvyQcQsamkgE3GpgQx/VtJA="
+  "encryptionKey": "qk8aCDiF49c5vUSfMe2Ip1MNtCA+SGuobaPNT6QGvcg="
 }
